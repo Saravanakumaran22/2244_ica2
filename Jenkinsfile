@@ -1,28 +1,39 @@
 pipeline {
     agent any
     stages {
-        stage('Info') {
+        stage('Checkout Code') {
             steps {
-                echo "Job: ${env.JOB_NAME} is building on branch ${env.GIT_BRANCH} and build-id is ${env.BUILD_ID}"
-                sh 'sleep 5'
+                git branch: 'develop', url: 'git@github.com:Saravanakumaran22/2244_ica2.git'
             }
         }
-        stage('Build') {
+        stage('Build Image') {
             steps {
-                echo "this is build stage"
-                sh 'sleep 5'
+                sh 'docker build -t static-website-nginx:develop-${BUILD_ID} .'
             }
         }
-        stage('Test') {
+        stage('Run Container') {
             steps {
-                echo "this is test stage"
-                sh 'sleep 5'
+                sh 'docker stop develop-container || true && docker rm develop-container || true'
+                sh 'docker run --name develop-container -d -p 8081:80 static-website-nginx:develop-${BUILD_ID}'
             }
         }
-        stage('Deploy') {
+        stage('Test Website') {
             steps {
-                echo "this is deploy stage"
-                sh 'sleep 5'
+                sh 'curl -I http://54.85.223.42:8081'
+            }
+        }
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                        docker login -u saravana227 -p ${DOCKERHUB_PASSWORD}
+                        docker tag static-website-nginx:develop-${BUILD_ID} saravana227
+/static-website-nginx:latest
+                        docker tag static-website-nginx:develop-${BUILD_ID} saravana227/static-website-nginx:develop-${BUILD_ID}
+                        docker push saravana227/static-website-nginx:latest
+                        docker push saravana227/static-website-nginx:develop-${BUILD_ID}
+                    '''
+                }
             }
         }
     }
