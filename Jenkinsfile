@@ -36,18 +36,18 @@ pipeline {
         }
 
         stage('Push Image') {
-            steps {
-                // Pushes the Docker image to Docker Hub
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh '''
-                        docker login -u saravana227 -p ${PASSWORD}
-                        docker tag static-website-nginx:develop-${BUILD_ID} saravana227/static-website-nginx:latest
-                        docker tag static-website-nginx:develop-${BUILD_ID} saravana227/static-website-nginx:develop-${BUILD_ID}
-                        docker push saravana227/static-website-nginx:latest
-                        docker push saravana227/static-website-nginx:develop-${BUILD_ID}
-                    '''
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            sh '''
+                docker login -u $USERNAME -p $PASSWORD
+                docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:latest
+                docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:develop-${BUILD_ID}
+                docker push $USERNAME/static-website-nginx:latest
+                docker push $USERNAME/static-website-nginx:develop-${BUILD_ID}
+            '''
         }
+    }
+}
+
     }
 }
