@@ -1,9 +1,17 @@
 pipeline {
     agent any
     stages {
+        stage('Cleanup') {
+            steps {
+                cleanWs()
+            }
+        }
+
+
+    stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'develop', url: 'git@github.com:Saravanakumaran22/2244_ica2.git'
+                checkout scm
             }
         }
         stage('Build Image') {
