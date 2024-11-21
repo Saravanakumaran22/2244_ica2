@@ -4,7 +4,7 @@ pipeline {
         stage('Pull Image') {
             steps {
                 // Pulls the latest image from Docker Hub
-                sh 'docker pull $USERNAME/static-website-nginx:latest'
+                sh 'docker pull saravana227/static-website-nginx:latest'
             }
         }
 
@@ -12,7 +12,7 @@ pipeline {
             steps {
                 // Stops and removes any existing container, then runs a new one
                 sh 'docker stop main-container || true && docker rm main-container || true'
-                sh 'docker run --name main-container -d -p 8082:80 $USERNAME/static-website-nginx:latest'
+                sh 'docker run --name main-container -d -p 8082:80 saravana227/static-website-nginx:latest'
             }
         }
 
