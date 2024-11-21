@@ -1,29 +1,53 @@
 pipeline {
     agent any
     stages {
-        stage('Info') {
+        stage('Cleanup') {
             steps {
-                echo "Job: ${env.JOB_NAME} is building on branch ${env.GIT_BRANCH} and build-id is ${env.BUILD_ID}"
-                sh 'sleep 5'
+                cleanWs() // Cleans the workspace
             }
         }
-        stage('Build') {
+
+        stage('Checkout Code') {
             steps {
-                echo "this is build stage"
-                sh 'sleep 5'
+                checkout scm // Checks out the code from the repository
             }
         }
-        stage('Test') {
+
+        stage('Build Image') {
             steps {
-                echo "this is test stage"
-                sh 'sleep 5'
+                // Builds the Docker image
+                sh 'docker build -t static-website-nginx:develop-${BUILD_ID} .'
             }
         }
-        stage('Deploy') {
+
+        stage('Run Container') {
             steps {
-                echo "this is deploy stage"
-                sh 'sleep 5'
+                // Stops and removes existing container, then runs a new one
+                sh 'docker stop develop-container || true && docker rm develop-container || true'
+                sh 'docker run --name develop-container -d -p 8081:80 static-website-nginx:develop-${BUILD_ID}'
             }
         }
+
+        stage('Test Website') {
+            steps {
+                // Tests if the website is accessible
+                sh 'curl -I http://54.85.223.42:8081'
+            }
+        }
+
+        stage('Push Image') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            sh '''
+                docker login -u $USERNAME -p $PASSWORD
+                docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:latest
+                docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:develop-${BUILD_ID}
+                docker push $USERNAME/static-website-nginx:latest
+                docker push $USERNAME/static-website-nginx:develop-${BUILD_ID}
+            '''
+        }
+    }
+}
+
     }
 }
