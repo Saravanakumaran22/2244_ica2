@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Cleanup') {
             steps {
-                cleanWs()
+                cleanWs() 
             }
         }
 
@@ -17,7 +17,7 @@ pipeline {
             steps {
                 sshagent(['docker-server']) {
                     sh '''
-                    scp -r Dockerfile Jenkinsfile README.md assets error images index.html root@52.87.247.202:/opt/2244_ica2/
+                    scp -r Dockerfile Jenkinsfile README.md assets error images index.html root@54.227.105.102:/opt/website_project/
                     '''
                 }
             }
@@ -27,7 +27,7 @@ pipeline {
             steps {
                 sshagent(['docker-server']) {
                     sh '''
-                    ssh root@52.87.247.202 "cd /opt/2244_ica2 && docker build -t static-website-nginx:develop-${BUILD_ID} ."
+                    ssh root@54.227.105.102 "cd /opt/website_project && docker build -t static-website-nginx:develop-${BUILD_ID} ."
                     '''
                 }
             }
@@ -37,7 +37,7 @@ pipeline {
             steps {
                 sshagent(['docker-server']) {
                     sh '''
-                    ssh root@52.87.247.202 "docker stop develop-container || true && docker rm develop-container || true && docker run --name develop-container -d -p 8081:80 static-website-nginx:develop-${BUILD_ID}"
+                    ssh root@54.227.105.102 "docker stop develop-container || true && docker rm develop-container || true && docker run --name develop-container -d -p 8081:80 static-website-nginx:develop-${BUILD_ID}"
                     '''
                 }
             }
@@ -47,7 +47,7 @@ pipeline {
             steps {
                 sshagent(['docker-server']) {
                     sh '''
-                    ssh root@52.87.247.202 "curl -I http://52.87.247.202:8081"
+                    ssh root@54.227.105.102 "curl -I http://54.227.105.102:8081"
                     '''
                 }
             }
@@ -58,9 +58,11 @@ pipeline {
                 sshagent(['docker-server']) {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         sh '''
-                        ssh root@52.87.247.202 "docker login -u $USERNAME -p $PASSWORD"
-                        ssh root@52.87.247.202 "docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:develop-${BUILD_ID}"
-                        ssh root@52.87.247.202 "docker push $USERNAME/static-website-nginx:develop-${BUILD_ID}"
+                        ssh root@54.227.105.102 "docker login -u $USERNAME -p $PASSWORD"
+                        ssh root@54.227.105.102 "docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:latest"
+                        ssh root@54.227.105.102 "docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:develop-${BUILD_ID}"
+                        ssh root@54.227.105.102 "docker push $USERNAME/static-website-nginx:latest"
+                        ssh root@54.227.105.102 "docker push $USERNAME/static-website-nginx:develop-${BUILD_ID}"
                         '''
                     }
                 }
