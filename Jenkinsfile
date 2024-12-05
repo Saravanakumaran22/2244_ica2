@@ -1,10 +1,34 @@
 pipeline {
     agent any
     stages {
-        stage('Pull Image') {
+        stage('Cleanup') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
+                checkout scm 
+            }
+        }
+
+        stage('Copy Files to Remote Server') {
             steps {
                 sshagent(['docker-server']) {
-                    sh 'ssh root@3.82.44.43 "docker pull saravana227/static-website-nginx:latest"'
+                    sh '''
+                    scp -r Dockerfile Jenkinsfile README.md assets error images index.html root@52.87.247.202:/opt/2244_ica2/
+                    '''
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sshagent(['docker-server']) {
+                    sh '''
+                    ssh root@52.87.247.202 "cd /opt/2244_ica2 && docker build -t static-website-nginx:develop-${BUILD_ID} ."
+                    '''
                 }
             }
         }
@@ -13,9 +37,7 @@ pipeline {
             steps {
                 sshagent(['docker-server']) {
                     sh '''
-                        ssh root@3.82.44.43 "docker stop main-container || true"
-                        ssh root@3.82.44.43 "docker rm main-container || true"
-                        ssh root@3.82.44.43 "docker run --name main-container -d -p 8082:80 saravana227/static-website-nginx:latest"
+                    ssh root@52.87.247.202 "docker stop develop-container || true && docker rm develop-container || true && docker run --name develop-container -d -p 8081:80 static-website-nginx:develop-${BUILD_ID}"
                     '''
                 }
             }
@@ -23,7 +45,25 @@ pipeline {
 
         stage('Test Website') {
             steps {
-                sh 'curl -I http://3.82.44.43:8082 || exit 1'
+                sshagent(['docker-server']) {
+                    sh '''
+                    ssh root@52.87.247.202 "curl -I http://52.87.247.202:8081"
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sshagent(['docker-server']) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh '''
+                        ssh root@52.87.247.202 "docker login -u $USERNAME -p $PASSWORD"
+                        ssh root@52.87.247.202 "docker tag static-website-nginx:develop-${BUILD_ID} $USERNAME/static-website-nginx:develop-${BUILD_ID}"
+                        ssh root@52.87.247.202 "docker push $USERNAME/static-website-nginx:develop-${BUILD_ID}"
+                        '''
+                    }
+                }
             }
         }
     }
